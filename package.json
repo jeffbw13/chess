@@ -1,0 +1,20 @@
+{
+  "name": "chess",
+  "version": "1.0.0",
+  "description": "Chess app",
+  "main": "index.js",
+  "dependencies": {
+    "react": "^16.8.4",
+    "react-dom": "^16.8.4"
+  },
+  "devDependencies": {
+    "parcel-bundler": "^1.12.1",
+    "prettier": "^1.16.1"
+  },
+  "scripts": {
+    "dev:parcel": "parcel src/index.html",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Jeff Whittington",
+  "license": "ISC"
+}
