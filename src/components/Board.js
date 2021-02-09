@@ -1,49 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import Square from './Square';
-import { startup } from '../../data/startup';
+import React, { useState, useEffect } from "react";
+import Square from "./Square";
+import { startup } from "../../data/startup";
 //  this retrieves where in /dist the images now reside
-const images = require('../images/pieces/*.png');
+const images = require("../images/pieces/*.png");
 
-const alph = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
-const Board= () => {
-
-  const [ board, setBoard ] = useState([]);
-  const [ kingLocs, setKingLocs ] = useState({'w': '1d', 'b': '8d'});
-  const [ turn, setTurn ] = useState('White');
-  const [ move, setMove ] = useState([]);
+const alph = ["a", "b", "c", "d", "e", "f", "g", "h"];
+const Board = () => {
+  const [board, setBoard] = useState([]);
+  const [kingLocs, setKingLocs] = useState({ w: "1e", b: "8e" });
+  const [turn, setTurn] = useState("White");
+  const [move, setMove] = useState([]);
 
   useEffect(() => {
-    const board = new Array(8).fill(new Array(8).fill('element')).map((a, i) => {
-      return a.map((s, j) => {
-        const id = `${8-i}${alph[j]}`;
-        return {"id":id, "piece": startup[id] || ""};
-      })
-    });
+    const board = new Array(8)
+      .fill(new Array(8).fill("element"))
+      .map((a, i) => {
+        return a.map((s, j) => {
+          const id = `${8 - i}${alph[j]}`;
+          return { id: id, piece: startup[id] || "" };
+        });
+      });
     setBoard(board);
-  }, [])
+  }, []);
 
   const onSquareClicked = (squareId, piece) => {
     //  this seems verbose
-    if (move.length === 0 && piece !== '') {
+    if (move.length === 0 && piece !== "") {
       //  right color?
-      if (turn === 'White') {
-        if (piece.charAt(0) !== 'w') {
-          alert('Invalid piece selected.');
-          piece = '';
+      if (turn === "White") {
+        if (piece.charAt(0) !== "w") {
+          alert("Invalid piece selected.");
+          piece = "";
         }
       } else {
-        if (piece.charAt(0) !== 'b') {
-          alert('Invalid piece selected.')
-          piece = '';
+        if (piece.charAt(0) !== "b") {
+          alert("Invalid piece selected.");
+          piece = "";
         }
       }
     }
     //  first element has to contain a piece; otherwise ignore
     //  later, may also want to ignore clicking on a piece that cannot move
-    if (move.length > 0 || piece !== '') {
+    if (move.length > 0 || piece !== "") {
       let boardT = [...board];
       let moveT = [...move];
-      moveT.push({squareId, piece});
+      moveT.push({ squareId, piece });
       //  buncha logic goes here
       if (moveT.length === 2) {
         const from = xLate(moveT[0].squareId);
@@ -55,29 +56,31 @@ const Board= () => {
         //  1. is this a valid move for the piece?
         //  2. did we move onto our own piece?  *invalid*
         //  3. did we move into check? *invalid *
-        if (!movedOntoOwnPiece(from, to, color) &&
-            moveValidForPiece(from, to, color, type)) {
+        if (
+          !movedOntoOwnPiece(from, to, color) &&
+          moveValidForPiece(from, to, color, type)
+        ) {
           //  so far so good
           //  did we take a piece?
           //  move our piece
           boardT[to[0]][to[1]].piece = board[from[0]][from[1]].piece;
-          boardT[from[0]][from[1]].piece = '';
+          boardT[from[0]][from[1]].piece = "";
           if (!kingInCheck(boardT, color)) {
             //  finalize move
             setBoard(boardT);
             //  set king's location
-            if (type === 'K') {
+            if (type === "K") {
               const kingLocs = kingLocs;
-              kingLocs[color] = moveT[1];    // 'to' location
+              kingLocs[color] = moveT[1]; // 'to' location
               setKingLocs(kingLocs);
             }
-            setTurn(turn === 'White' ? 'Black' : 'White')
-            const oColor = color === 'w' ? 'b' : 'w';
+            setTurn(turn === "White" ? "Black" : "White");
+            const oColor = color === "w" ? "b" : "w";
             if (kingInCheck(board, oColor)) {
-              alert(`${oColor} king in check!`);   //  what about checkmate?
+              alert(`${oColor} king in check!`); //  what about checkmate?
             }
           } else {
-            alert('Invalid move - king in check!');
+            alert("Invalid move - king in check!");
           }
         } else {
           alert("Invalid move");
@@ -89,22 +92,22 @@ const Board= () => {
     }
   };
 
-  const xLate = (squareId) => {
+  const xLate = squareId => {
     //  translate click position to matrix point
     const row = 8 - parseInt(squareId.charAt(0));
     const col = alph.indexOf(squareId.charAt(1));
     return [row, col];
   };
 
-  const xLateBack = (index) => {
+  const xLateBack = index => {
     //  translate click position to matrix point
     const col = alph[index[1]];
     const row = 8 - index[0];
-    return row+col;
+    return row + col;
   };
 
   const movedOntoOwnPiece = (from, to, color) => {
-    console.log('to ', to, 'board to ', board[to[0]][to[1]]);
+    console.log("to ", to, "board to ", board[to[0]][to[1]]);
     return board[to[0]][to[1]].piece.charAt(0) === color ? true : false;
   };
 
@@ -112,17 +115,19 @@ const Board= () => {
     let valid = false;
     //  also need to check if move is blocked
     //  should we use a switch?
-    if (type === 'K') {
-      if ((Math.abs(to[0]-from[0]) === 1 && from[1] === to[1]) ||
-          (Math.abs(to[1]-from[1]) === 1 && from[0] === to[0]) ||
-          (Math.abs(to[0]-from[0]) === 1 && Math.abs(to[0]-from[0]) === 1)) {
-            valid = true;
-            //  no obstruction possible
-          }
+    if (type === "K") {
+      if (
+        (Math.abs(to[0] - from[0]) === 1 && from[1] === to[1]) ||
+        (Math.abs(to[1] - from[1]) === 1 && from[0] === to[0]) ||
+        (Math.abs(to[0] - from[0]) === 1 && Math.abs(to[0] - from[0]) === 1)
+      ) {
+        valid = true;
+        //  no obstruction possible
+      }
     }
     //  same row = horiz move; same col = vert move
-    if (type === 'Q' || type === 'R') {
-      if (from[0] === to[0] || from [1] === to[1]) {
+    if (type === "Q" || type === "R") {
+      if (from[0] === to[0] || from[1] === to[1]) {
         //  if same column
         if (from[0] === to[0]) {
           valid = true;
@@ -130,7 +135,7 @@ const Board= () => {
           const lower = Math.min(from[1], to[1]);
           const higher = Math.max(from[1], to[1]);
           for (let x = lower + 1; x < higher; x++) {
-            if (board[from[0]][x].piece !== '') {
+            if (board[from[0]][x].piece !== "") {
               valid = false;
               break;
             }
@@ -143,7 +148,7 @@ const Board= () => {
           const lower = Math.min(from[0], to[0]);
           const higher = Math.max(from[0], to[0]);
           for (let x = lower + 1; x < higher; x++) {
-            if (board[x][from[1]].piece !== '') {
+            if (board[x][from[1]].piece !== "") {
               valid = false;
               break;
             }
@@ -152,34 +157,34 @@ const Board= () => {
       }
     }
     //  +- multiple of seven or nine = diagonal move
-    if (!valid && (type === 'Q' || type === 'B')) {
-      const diff = Math.abs((from[0]*8+from[1]) - (to[0]*8+to[1]));
-      if (diff%7 === 0) {
+    if (!valid && (type === "Q" || type === "B")) {
+      const diff = Math.abs(from[0] * 8 + from[1] - (to[0] * 8 + to[1]));
+      if (diff % 7 === 0) {
         valid = true;
         //  obstructed?
         //  refactor
-        const lower = Math.min(from[0]*8+from[1], to[0]*8+to[1]);
-        const higher = Math.max(from[0]*8+from[1], to[0]*8+to[1]);
-        for (let x = lower + 7; x < higher; x+=7) {
+        const lower = Math.min(from[0] * 8 + from[1], to[0] * 8 + to[1]);
+        const higher = Math.max(from[0] * 8 + from[1], to[0] * 8 + to[1]);
+        for (let x = lower + 7; x < higher; x += 7) {
           //  translate x into a board position
           const y = Math.floor(x / 8);
           const z = x - y * 8;
-          if (board[y][z].piece !== '') {
+          if (board[y][z].piece !== "") {
             valid = false;
             break;
           }
         }
       }
-      if (diff%9 === 0) {
+      if (diff % 9 === 0) {
         valid = true;
         //  obstructed?
-        const lower = Math.min(from[0]*8+from[1], to[0]*8+to[1]);
-        const higher = Math.max(from[0]*8+from[1], to[0]*8+to[1]);
-        for (let x = lower + 9; x < higher; x+=9) {
+        const lower = Math.min(from[0] * 8 + from[1], to[0] * 8 + to[1]);
+        const higher = Math.max(from[0] * 8 + from[1], to[0] * 8 + to[1]);
+        for (let x = lower + 9; x < higher; x += 9) {
           //  translate x into a board position
           const y = Math.floor(x / 8);
           const z = x - y * 8;
-          if (board[y][z].piece !== '') {
+          if (board[y][z].piece !== "") {
             valid = false;
             break;
           }
@@ -187,30 +192,44 @@ const Board= () => {
       }
     }
     //  knight - ??  3 horiz/vert squares, one perpendicular, can't be blocked
-    if (type === 'N') {
+    if (type === "N") {
       //  aw, hell no
-      const diff = Math.abs((from[0]*8+from[1]) - (to[0]*8+to[1]));
-      console.log('diff: ', diff);
+      const diff = Math.abs(from[0] * 8 + from[1] - (to[0] * 8 + to[1]));
+      console.log("diff: ", diff);
       if (diff === 6 || diff === 10 || diff === 15 || diff === 17) {
         valid = true;
         //  knight can't be obstructed
       }
     }
     //  pawn: ahead one; or two if first move; one diag if take opposing piece
-    if (type === 'P') {
+    if (type === "P") {
       // this can probably be simplified
-      if (color === 'b' &&
-      (from[1] === to[1] &&
-        (to[0] - from[0] === 1 && board[to[0]][to[1]].piece === '') ||
-        (to[0] - from[0] === 2 && board[from[0]+1][to[1]].piece === '' && board[to[0]][to[1]].piece === '' && to[0] === 3)) ||
-      (Math.abs(from [1] - to[1]) === 1 && to[0] - from[0] === 1 && board[to[0]][to[1]].piece !== '')) {
+      if (
+        (color === "b" &&
+          ((from[1] === to[1] &&
+            to[0] - from[0] === 1 && board[to[0]][to[1]].piece === "") ||
+            (to[0] - from[0] === 2 &&
+              board[from[0] + 1][to[1]].piece === "" &&
+              board[to[0]][to[1]].piece === "" &&
+              to[0] === 3))) ||
+        (Math.abs(from[1] - to[1]) === 1 &&
+          to[0] - from[0] === 1 &&
+          board[to[0]][to[1]].piece !== "")
+      ) {
         valid = true;
       }
-      if (color === 'w' &&
-      (from[1] === to[1] &&
-        (from[0] - to[0] === 1 && board[to[0]][to[1]].piece === '') ||
-        (from[0] - to[0] === 2 && board[from[0]-1][from[1]].piece === '' && board[to[0]][to[1]].piece === '' && to[0] === 4)) ||
-      (Math.abs(to[1] - from [1]) === 1 && from[0] - to[0] === 1 && board[to[0]][to[1]].piece !== '')) {
+      if (
+        (color === "w" &&
+          ((from[1] === to[1] &&
+            from[0] - to[0] === 1 && board[to[0]][to[1]].piece === "") ||
+            (from[0] - to[0] === 2 &&
+              board[from[0] - 1][from[1]].piece === "" &&
+              board[to[0]][to[1]].piece === "" &&
+              to[0] === 4))) ||
+        (Math.abs(to[1] - from[1]) === 1 &&
+          from[0] - to[0] === 1 &&
+          board[to[0]][to[1]].piece !== "")
+      ) {
         valid = true;
       }
     }
@@ -218,34 +237,93 @@ const Board= () => {
   };
 
   const kingInCheck = (board, color) => {
+    //  under construction
+    return false;
+    //  checking for check is similar to checking for valid move
+    //  should be able to use same routines for both?
+    //  routines: travelVert, travelHorix, travelDiag, travelL
+    //  e.g. travelvert(from, to, posNeg).  If checking chrck,
+    //  to = edge of board.  Routines return first obstruction.
     const kLoc = xLate(kingLocs[color]);
     //  danger from above or below?
+    for (let y = kloc[0] - 1; y >= 0; y--) {
+      let piece = board[y][kloc[1]].piece;
+      if (piece !== "" && piece.charAt(0) !== color) {
+        //  queen, rook, king at one space?  Problem!
+        if (
+          piece.charAt(1) === "Q" ||
+          piece.charAt(1) === "R" ||
+          (piece.charAt(1) === "K" && y === kloc[0] - 1)
+        ) {
+          return true;
+        }
+        //  where do we check pawns?
+      }
+    }
+    //  this looks like duplication; refactor
+    for (let y = kloc[0] + 1; y < board.length; y++) {
+      let piece = board[y][kloc[1]].piece;
+      if (piece !== "" && piece.charAt(0) !== color) {
+        //  queen, rook, king at one space?  Problem!
+        if (
+          piece.charAt(1) === "Q" ||
+          piece.charAt(1) === "R" ||
+          (piece.charAt(1) === "K" && y === kloc[0] + 1)
+        ) {
+          return true;
+        }
+        //  where do we check pawns?
+      }
+    }
     //  danger from L / R?
+    for (let x = kloc[1] - 1; x >= 0; x--) {
+      let piece = board[kloc[0]][x].piece;
+      if (piece !== "" && piece.charAt(0) !== color) {
+        //  queen, rook, king at one space?  Problem!
+        if (
+          piece.charAt(1) === "Q" ||
+          piece.charAt(1) === "R" ||
+          (piece.charAt(1) === "K" && x === kloc[1] - 1)
+        ) {
+          return true;
+        }
+        //  where do we check pawns?
+      }
+    }
     //  diagonal danger?
     //  danger from horsies?
     return false;
-  }
+  };
 
   console.log(board);
   let squareNum = 0;
   return (
     <>
-    <h1>Move: {turn}</h1>
-    <div style={{width: '80vw', display: 'flex', flexWrap: 'wrap', border: '1px solid black',}}>
-      {board.map(r => {
-        return(r.map(s => {
-          return <Square
-                  key={s.id}
-                  data={s}
-                  images={images}
-                  squareNum={++squareNum}
-                  onSquareClicked={onSquareClicked}
-                  />
-        }))
-      })}
-    </div>
+      <h1>Move: {turn}</h1>
+      <div
+        style={{
+          width: "80vw",
+          display: "flex",
+          flexWrap: "wrap",
+          border: "1px solid black"
+        }}
+      >
+        {board.map(r => {
+          return r.map(s => {
+            return (
+              <Square
+                key={s.id}
+                data={s}
+                images={images}
+                squareNum={++squareNum}
+                onSquareClicked={onSquareClicked}
+              />
+            );
+          });
+        })}
+      </div>
     </>
-  )
+  );
 };
 
 export default Board;
