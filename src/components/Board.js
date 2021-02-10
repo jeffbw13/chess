@@ -11,6 +11,11 @@ const Board = () => {
   const [turn, setTurn] = useState("White");
   const [move, setMove] = useState([]);
 
+  let spaceNo = indexToSpaceNo([2, 4]);
+  console.log("spaceno: ", spaceNo);
+  let index = spaceNoToIndex(spaceNo);
+  console.log("index:", index);
+
   useEffect(() => {
     const board = new Array(8)
       .fill(new Array(8).fill("element"))
@@ -24,6 +29,7 @@ const Board = () => {
   }, []);
 
   const onSquareClicked = (squareId, piece) => {
+    //console.log("travelDiag", travelDiag([3, 5], [2, 4]));
     //  this seems verbose
     if (move.length === 0 && piece !== "") {
       //  right color?
@@ -71,6 +77,7 @@ const Board = () => {
             //  set king's location
             if (type === "K") {
               const kingLocs = kingLocs;
+              //  kinglocs apparently has a problem
               kingLocs[color] = moveT[1]; // 'to' location
               setKingLocs(kingLocs);
             }
@@ -106,6 +113,16 @@ const Board = () => {
     return row + col;
   };
 
+  function spaceNoToIndex(spaceNo) {
+    const row = Math.floor(spaceNo / 8);
+    const col = spaceNo % 8;
+    return [row, col];
+  }
+
+  function indexToSpaceNo(index) {
+    return index[0] * 8 + index[1];
+  }
+
   const movedOntoOwnPiece = (from, to, color) => {
     console.log("to ", to, "board to ", board[to[0]][to[1]]);
     return board[to[0]][to[1]].piece.charAt(0) === color ? true : false;
@@ -115,6 +132,7 @@ const Board = () => {
     let valid = false;
     //  also need to check if move is blocked
     //  should we use a switch?
+    //  note: king can put HIMSELF in check from other king
     if (type === "K") {
       if (
         (Math.abs(to[0] - from[0]) === 1 && from[1] === to[1]) ||
@@ -125,71 +143,54 @@ const Board = () => {
         //  no obstruction possible
       }
     }
-    //  same row = horiz move; same col = vert move
+    //  check for horizontal or vertical move
     if (type === "Q" || type === "R") {
-      if (from[0] === to[0] || from[1] === to[1]) {
-        //  if same column
-        if (from[0] === to[0]) {
-          valid = true;
-          //  obstructed?
-          const lower = Math.min(from[1], to[1]);
-          const higher = Math.max(from[1], to[1]);
-          for (let x = lower + 1; x < higher; x++) {
-            if (board[from[0]][x].piece !== "") {
-              valid = false;
-              break;
-            }
-          }
-        }
-        //  if same row
-        if (from[1] === to[1]) {
-          valid = true;
-          //  obstructed?
-          const lower = Math.min(from[0], to[0]);
-          const higher = Math.max(from[0], to[0]);
-          for (let x = lower + 1; x < higher; x++) {
-            if (board[x][from[1]].piece !== "") {
-              valid = false;
-              break;
-            }
-          }
-        }
+      //  if same row
+      //valid = travelHoriz(from, to) === "ok" ? true : false;
+      //  else if same column
+      valid = travelDiag(from, to, "h") === "ok" ? true : false;
+
+      if (!valid) {
+        //valid = travelVert(from, to) === "ok" ? true : false;
+        valid = travelDiag(from, to, "v") === "ok" ? true : false;
       }
     }
     //  +- multiple of seven or nine = diagonal move
     if (!valid && (type === "Q" || type === "B")) {
-      const diff = Math.abs(from[0] * 8 + from[1] - (to[0] * 8 + to[1]));
-      if (diff % 7 === 0) {
-        valid = true;
-        //  obstructed?
-        //  refactor
-        const lower = Math.min(from[0] * 8 + from[1], to[0] * 8 + to[1]);
-        const higher = Math.max(from[0] * 8 + from[1], to[0] * 8 + to[1]);
-        for (let x = lower + 7; x < higher; x += 7) {
-          //  translate x into a board position
-          const y = Math.floor(x / 8);
-          const z = x - y * 8;
-          if (board[y][z].piece !== "") {
-            valid = false;
-            break;
-          }
-        }
-      }
-      if (diff % 9 === 0) {
-        valid = true;
-        //  obstructed?
-        const lower = Math.min(from[0] * 8 + from[1], to[0] * 8 + to[1]);
-        const higher = Math.max(from[0] * 8 + from[1], to[0] * 8 + to[1]);
-        for (let x = lower + 9; x < higher; x += 9) {
-          //  translate x into a board position
-          const y = Math.floor(x / 8);
-          const z = x - y * 8;
-          if (board[y][z].piece !== "") {
-            valid = false;
-            break;
-          }
-        }
-      }
+      valid = travelDiag(from, to, "d") === "ok" ? true : false;
+
+      // const diff = Math.abs(from[0] * 8 + from[1] - (to[0] * 8 + to[1]));
+      // if (diff % 7 === 0) {
+      //   valid = true;
+      //   //  obstructed?
+      //   //  refactor
+      //   const lower = Math.min(from[0] * 8 + from[1], to[0] * 8 + to[1]);
+      //   const higher = Math.max(from[0] * 8 + from[1], to[0] * 8 + to[1]);
+      //   for (let x = lower + 7; x < higher; x += 7) {
+      //     //  translate x into a board position
+      //     const y = Math.floor(x / 8);
+      //     const z = x - y * 8;
+      //     if (board[y][z].piece !== "") {
+      //       valid = false;
+      //       break;
+      //     }
+      //   }
+      // }
+      // if (diff % 9 === 0) {
+      //   valid = true;
+      //   //  obstructed?
+      //   const lower = Math.min(from[0] * 8 + from[1], to[0] * 8 + to[1]);
+      //   const higher = Math.max(from[0] * 8 + from[1], to[0] * 8 + to[1]);
+      //   for (let x = lower + 9; x < higher; x += 9) {
+      //     //  translate x into a board position
+      //     const y = Math.floor(x / 8);
+      //     const z = x - y * 8;
+      //     if (board[y][z].piece !== "") {
+      //       valid = false;
+      //       break;
+      //     }
+      //   }
+      // }
     }
     //  knight - ??  3 horiz/vert squares, one perpendicular, can't be blocked
     if (type === "N") {
@@ -207,7 +208,8 @@ const Board = () => {
       if (
         (color === "b" &&
           ((from[1] === to[1] &&
-            to[0] - from[0] === 1 && board[to[0]][to[1]].piece === "") ||
+            to[0] - from[0] === 1 &&
+            board[to[0]][to[1]].piece === "") ||
             (to[0] - from[0] === 2 &&
               board[from[0] + 1][to[1]].piece === "" &&
               board[to[0]][to[1]].piece === "" &&
@@ -221,7 +223,8 @@ const Board = () => {
       if (
         (color === "w" &&
           ((from[1] === to[1] &&
-            from[0] - to[0] === 1 && board[to[0]][to[1]].piece === "") ||
+            from[0] - to[0] === 1 &&
+            board[to[0]][to[1]].piece === "") ||
             (from[0] - to[0] === 2 &&
               board[from[0] - 1][from[1]].piece === "" &&
               board[to[0]][to[1]].piece === "" &&
@@ -235,6 +238,111 @@ const Board = () => {
     }
     return valid;
   };
+
+  const travelHoriz = (from, to, check) => {
+    //  is this a horizontal move?  Row must be same
+    if (from[0] !== to[0]) {
+      return "notVert";
+    }
+    //  travel horizontally & find first 'obstruction'
+    const incDec = from[1] < to[1] ? 1 : -1;
+    let x = from[1] + incDec;
+    //  only do the loop if pieces aren't adjacent
+    while (x !== to[1]) {
+      if (board[from[0]][x].piece !== "") {
+        return board[from[0]][x].piece;
+      }
+      x += incDec;
+    }
+    //  if testing for check, send back the obstruction if it's the 'to' piece
+    if (check) {
+      return board[from[0]][x].piece;
+    }
+    return "ok"; // move is ok
+  };
+
+  const travelVert = (from, to, check) => {
+    //  is this a vertical move?  Column must be same
+    if (from[1] !== to[1]) {
+      console.log(from, to);
+      return "notVert";
+    }
+    //  travel vertically & find first 'obstruction'
+    const incDec = from[0] < to[0] ? 1 : -1;
+    let x = from[0] + incDec;
+    //  only do the loop if pieces aren't adjacent
+    while (x !== to[0]) {
+      if (board[x][from[1]].piece !== "") {
+        return board[x][from[1]].piece;
+      }
+      x += incDec;
+    }
+    //  if testing for check, send back the obstruction if it's the 'to' piece
+    if (check) {
+      return board[x][from[1]].piece;
+    }
+    return "ok"; // move is ok
+  };
+
+  function travelDiag(from, to, direction, check) {
+    const diff = Math.abs(from[0] * 8 + from[1] - (to[0] * 8 + to[1]));
+    let spaces = [];
+    switch (direction) {
+      case "d":
+        spaces = [7, 9];
+        break;
+      case "h":
+        spaces = [1];
+        break;
+      case "v":
+        spaces = [8];
+        break;
+    }
+    //  must be on same row to be horizontal
+    if (direction === "h" && from[0] !== to[0]) {
+      return "notValid";
+    }
+    //  check if diff is an allowed multiple of spaces
+    //  is this archaic?
+    let div = 0;
+    for (let x = 0; x < spaces.length; x++) {
+      if (diff % spaces[x] === 0) {
+        div = spaces[x];
+        break;
+      }
+    }
+    if (div === 0) {
+      return "notValid";
+    }
+    console.log(from, to, "diff", diff, "direction: ", direction);
+    //  longhand for now
+    // let div = 0;
+    // if (diff % 7 === 0) {
+    //   div = 7;
+    // } else if (diff % 9 === 0) {
+    //   div = 9;
+    // } else {
+    //   return "notDiag";
+    // }
+
+    //if (diff % 7 === 0) {
+    //  obstructed?
+    //  for the sake of 'check,' we need to travel FROM from and TO to.
+    //  we need to know if 'to' is ultimately less or greater than 'from'
+    const fromVal = indexToSpaceNo(from);
+    const toVal = indexToSpaceNo(to);
+    const incDec = fromVal < toVal ? div : -div;
+    let x = fromVal + incDec;
+    while (x !== toVal) {
+      const currIndex = spaceNoToIndex(x);
+      console.log("currIndex: ", currIndex);
+      if (board[currIndex[0]][currIndex[1]].piece !== "") {
+        return board[currIndex[0]][currIndex[1]].piece;
+      }
+      x += incDec;
+    }
+    return "ok";
+  }
 
   const kingInCheck = (board, color) => {
     //  under construction
