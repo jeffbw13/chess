@@ -76,10 +76,9 @@ const Board = () => {
             setBoard(boardT);
             //  set king's location
             if (type === "K") {
-              const kingLocs = kingLocs;
-              //  kinglocs apparently has a problem
-              kingLocs[color] = moveT[1]; // 'to' location
-              setKingLocs(kingLocs);
+              const kingLocsT = kingLocs;
+              kingLocsT[color] = moveT[1].squareId; // 'to' location
+              setKingLocs(kingLocsT);
             }
             setTurn(turn === "White" ? "Black" : "White");
             const oColor = color === "w" ? "b" : "w";
@@ -148,59 +147,27 @@ const Board = () => {
       //  if same row
       //valid = travelHoriz(from, to) === "ok" ? true : false;
       //  else if same column
-      valid = travelDiag(from, to, "h") === "ok" ? true : false;
+      valid = travel(from, to, "h") === "ok" ? true : false;
 
       if (!valid) {
         //valid = travelVert(from, to) === "ok" ? true : false;
-        valid = travelDiag(from, to, "v") === "ok" ? true : false;
+        valid = travel(from, to, "v") === "ok" ? true : false;
       }
     }
     //  +- multiple of seven or nine = diagonal move
     if (!valid && (type === "Q" || type === "B")) {
-      valid = travelDiag(from, to, "d") === "ok" ? true : false;
-
-      // const diff = Math.abs(from[0] * 8 + from[1] - (to[0] * 8 + to[1]));
-      // if (diff % 7 === 0) {
-      //   valid = true;
-      //   //  obstructed?
-      //   //  refactor
-      //   const lower = Math.min(from[0] * 8 + from[1], to[0] * 8 + to[1]);
-      //   const higher = Math.max(from[0] * 8 + from[1], to[0] * 8 + to[1]);
-      //   for (let x = lower + 7; x < higher; x += 7) {
-      //     //  translate x into a board position
-      //     const y = Math.floor(x / 8);
-      //     const z = x - y * 8;
-      //     if (board[y][z].piece !== "") {
-      //       valid = false;
-      //       break;
-      //     }
-      //   }
-      // }
-      // if (diff % 9 === 0) {
-      //   valid = true;
-      //   //  obstructed?
-      //   const lower = Math.min(from[0] * 8 + from[1], to[0] * 8 + to[1]);
-      //   const higher = Math.max(from[0] * 8 + from[1], to[0] * 8 + to[1]);
-      //   for (let x = lower + 9; x < higher; x += 9) {
-      //     //  translate x into a board position
-      //     const y = Math.floor(x / 8);
-      //     const z = x - y * 8;
-      //     if (board[y][z].piece !== "") {
-      //       valid = false;
-      //       break;
-      //     }
-      //   }
-      // }
+      valid = travel(from, to, "d") === "ok" ? true : false;
     }
     //  knight - ??  3 horiz/vert squares, one perpendicular, can't be blocked
     if (type === "N") {
+      valid = travel(from, to, "n") === "ok" ? true : false;
       //  aw, hell no
-      const diff = Math.abs(from[0] * 8 + from[1] - (to[0] * 8 + to[1]));
-      console.log("diff: ", diff);
-      if (diff === 6 || diff === 10 || diff === 15 || diff === 17) {
-        valid = true;
-        //  knight can't be obstructed
-      }
+      // const diff = Math.abs(from[0] * 8 + from[1] - (to[0] * 8 + to[1]));
+      // console.log("diff: ", diff);
+      // if (diff === 6 || diff === 10 || diff === 15 || diff === 17) {
+      //   valid = true;
+      //   //  knight can't be obstructed
+      // }
     }
     //  pawn: ahead one; or two if first move; one diag if take opposing piece
     if (type === "P") {
@@ -239,70 +206,44 @@ const Board = () => {
     return valid;
   };
 
-  const travelHoriz = (from, to, check) => {
-    //  is this a horizontal move?  Row must be same
-    if (from[0] !== to[0]) {
-      return "notVert";
+  function travel(from, to, direction, check) {
+    //  must be on same row to be horizontal
+    if (direction === "h" && from[0] !== to[0]) {
+      return "notValid";
     }
-    //  travel horizontally & find first 'obstruction'
-    const incDec = from[1] < to[1] ? 1 : -1;
-    let x = from[1] + incDec;
-    //  only do the loop if pieces aren't adjacent
-    while (x !== to[1]) {
-      if (board[from[0]][x].piece !== "") {
-        return board[from[0]][x].piece;
-      }
-      x += incDec;
+    if (check && JSON.stringify(from) == JSON.stringify(to)) {
+      return "ok";
     }
-    //  if testing for check, send back the obstruction if it's the 'to' piece
-    if (check) {
-      return board[from[0]][x].piece;
-    }
-    return "ok"; // move is ok
-  };
-
-  const travelVert = (from, to, check) => {
-    //  is this a vertical move?  Column must be same
-    if (from[1] !== to[1]) {
-      console.log(from, to);
-      return "notVert";
-    }
-    //  travel vertically & find first 'obstruction'
-    const incDec = from[0] < to[0] ? 1 : -1;
-    let x = from[0] + incDec;
-    //  only do the loop if pieces aren't adjacent
-    while (x !== to[0]) {
-      if (board[x][from[1]].piece !== "") {
-        return board[x][from[1]].piece;
-      }
-      x += incDec;
-    }
-    //  if testing for check, send back the obstruction if it's the 'to' piece
-    if (check) {
-      return board[x][from[1]].piece;
-    }
-    return "ok"; // move is ok
-  };
-
-  function travelDiag(from, to, direction, check) {
-    const diff = Math.abs(from[0] * 8 + from[1] - (to[0] * 8 + to[1]));
-    let spaces = [];
+    let spaces = []; //  spaces in move length
     switch (direction) {
-      case "d":
-        spaces = [7, 9];
-        break;
       case "h":
         spaces = [1];
         break;
       case "v":
         spaces = [8];
         break;
+      case "d":
+        spaces = [7, 9];
+        break;
+      case "n":
+        spaces = [6, 10, 15, 17];
+        break;
     }
-    //  must be on same row to be horizontal
-    if (direction === "h" && from[0] !== to[0]) {
-      return "notValid";
+    //  spaces between from and to
+    const diff = Math.abs(from[0] * 8 + from[1] - (to[0] * 8 + to[1]));
+    //  if knight:
+    //    1. diff must be one of the items in 'spaces'
+    //    2. from, to MUST have different column AND row
+    //    3. obstructions not possible
+    if (
+      direction === "n" &&
+      spaces.includes(diff) &&
+      from[0] !== to[0] &&
+      from[1] !== to[1]
+    ) {
+      return "ok";
     }
-    //  check if diff is an allowed multiple of spaces
+    //  check if diff is a multiple of spaces
     //  is this archaic?
     let div = 0;
     for (let x = 0; x < spaces.length; x++) {
@@ -315,17 +256,7 @@ const Board = () => {
       return "notValid";
     }
     console.log(from, to, "diff", diff, "direction: ", direction);
-    //  longhand for now
-    // let div = 0;
-    // if (diff % 7 === 0) {
-    //   div = 7;
-    // } else if (diff % 9 === 0) {
-    //   div = 9;
-    // } else {
-    //   return "notDiag";
-    // }
 
-    //if (diff % 7 === 0) {
     //  obstructed?
     //  for the sake of 'check,' we need to travel FROM from and TO to.
     //  we need to know if 'to' is ultimately less or greater than 'from'
@@ -333,6 +264,7 @@ const Board = () => {
     const toVal = indexToSpaceNo(to);
     const incDec = fromVal < toVal ? div : -div;
     let x = fromVal + incDec;
+
     while (x !== toVal) {
       const currIndex = spaceNoToIndex(x);
       console.log("currIndex: ", currIndex);
@@ -341,66 +273,108 @@ const Board = () => {
       }
       x += incDec;
     }
-    return "ok";
+    if (check) {
+      return board[to[0]][to[1]].piece || "ok";
+    } else {
+      return "ok";
+    }
   }
 
+  //  kingInCheck
+  //  check for:
+  //  1. horiz threats (L&R)
+  //  2. vertical threats (top and bottom)
+  //  3. diagonal threats (4 directions)
   const kingInCheck = (board, color) => {
     //  under construction
-    return false;
-    //  checking for check is similar to checking for valid move
-    //  should be able to use same routines for both?
-    //  routines: travelVert, travelHorix, travelDiag, travelL
-    //  e.g. travelvert(from, to, posNeg).  If checking chrck,
-    //  to = edge of board.  Routines return first obstruction.
+    //return false;
     const kLoc = xLate(kingLocs[color]);
-    //  danger from above or below?
-    for (let y = kloc[0] - 1; y >= 0; y--) {
-      let piece = board[y][kloc[1]].piece;
-      if (piece !== "" && piece.charAt(0) !== color) {
-        //  queen, rook, king at one space?  Problem!
-        if (
-          piece.charAt(1) === "Q" ||
-          piece.charAt(1) === "R" ||
-          (piece.charAt(1) === "K" && y === kloc[0] - 1)
-        ) {
-          return true;
-        }
-        //  where do we check pawns?
-      }
+    //  horiz left
+    if (isThreat(travel(kLoc, [kLoc[0], 0], "h", true), color)) {
+      return true;
     }
-    //  this looks like duplication; refactor
-    for (let y = kloc[0] + 1; y < board.length; y++) {
-      let piece = board[y][kloc[1]].piece;
-      if (piece !== "" && piece.charAt(0) !== color) {
-        //  queen, rook, king at one space?  Problem!
-        if (
-          piece.charAt(1) === "Q" ||
-          piece.charAt(1) === "R" ||
-          (piece.charAt(1) === "K" && y === kloc[0] + 1)
-        ) {
-          return true;
-        }
-        //  where do we check pawns?
-      }
+    //  horiz right
+    if (isThreat(travel(kLoc, [kLoc[0], 7], "h", true), color)) {
+      return true;
     }
-    //  danger from L / R?
-    for (let x = kloc[1] - 1; x >= 0; x--) {
-      let piece = board[kloc[0]][x].piece;
-      if (piece !== "" && piece.charAt(0) !== color) {
-        //  queen, rook, king at one space?  Problem!
-        if (
-          piece.charAt(1) === "Q" ||
-          piece.charAt(1) === "R" ||
-          (piece.charAt(1) === "K" && x === kloc[1] - 1)
-        ) {
-          return true;
-        }
-        //  where do we check pawns?
-      }
+    //  vert up
+    if (isThreat(travel(kLoc, [0, kLoc[1]], "v", true), color)) {
+      return true;
     }
-    //  diagonal danger?
-    //  danger from horsies?
+    //  vert down
+    if (isThreat(travel(kLoc, [7, kLoc[1]], "v", true), color)) {
+      return true;
+    }
+    //  diag northwest
+    //  calc endpos from kLoc: stop at whichever axis turns zero first
+    let endPos = calcEndPos(kLoc, -1, -1);
+    console.log("endPos: ", endPos);
+    if (isThreat(travel(kLoc, endPos, "d", true), color)) {
+      return true;
+    }
+    //  diag northeast
+    //  calc endpos from kLoc: stop at whichever axis turns 0/7 first
+    endPos = calcEndPos(kLoc, -1, 1);
+    console.log("endPos: ", endPos);
+
+    if (isThreat(travel(kLoc, endPos, "d", true), color)) {
+      return true;
+    }
+    //  diag southwest
+    //  calc endpos from kLoc: stop at whichever axis turns 7/0 first
+    endPos = calcEndPos(kLoc, 1, 1);
+    console.log("endPos: ", endPos);
+
+    if (isThreat(travel(kLoc, endPos, "d", true), color)) {
+      return true;
+    }
+    //  diag southeast
+    //  calc endpos from kLoc: stop at whichever axis turns 7/7 first
+    endPos = calcEndPos(kLoc, 1, -1);
+    console.log("endPos: ", endPos);
+
+    if (isThreat(travel(kLoc, endPos, "d", true), color)) {
+      return true;
+    }
     return false;
+  };
+
+  const isThreat = (travelResult, color) => {
+    console.log("travelResult: ", travelResult, "color: ", color);
+    if (
+      travelResult &&
+      travelResult !== "ok" &&
+      travelResult !== "notValid" &&
+      travelResult.charAt(0) !== color
+    ) {
+      if (
+        travelResult.charAt(1) === "Q" ||
+        travelResult.charAt(1) === "R" ||
+        travelResult.charAt(1) === "B" ||
+        (travelResult.charAt(1) === "K" && "what?")
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const calcEndPos = (kLoc, rowX, colX) => {
+    let endPos = [...kLoc];
+    // if first iteration would go beyond board, exit
+    if (
+      (endPos[0] === 0 && rowX === -1) ||
+      (endPos[0] === 7 && rowX === 1) ||
+      (endPos[1] === 0 && colX === -1) ||
+      (endPos[1] === 7 && colX === 1)
+    ) {
+      return endPos;
+    }
+    do {
+      endPos[0] += rowX;
+      endPos[1] += colX;
+    } while (endPos[0] > 0 && endPos[0] < 7 && endPos[1] > 0 && endPos[1] < 7);
+    return endPos;
   };
 
   console.log(board);
