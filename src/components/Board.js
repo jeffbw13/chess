@@ -11,11 +11,6 @@ const Board = () => {
   const [turn, setTurn] = useState("White");
   const [move, setMove] = useState([]);
 
-  let spaceNo = indexToSpaceNo([2, 4]);
-  console.log("spaceno: ", spaceNo);
-  let index = spaceNoToIndex(spaceNo);
-  console.log("index:", index);
-
   useEffect(() => {
     const board = new Array(8)
       .fill(new Array(8).fill("element"))
@@ -29,10 +24,9 @@ const Board = () => {
   }, []);
 
   const onSquareClicked = (squareId, piece) => {
-    //console.log("travelDiag", travelDiag([3, 5], [2, 4]));
+    //  alerts should be replaced by alarm messages
     //  this seems verbose
     if (move.length === 0 && piece !== "") {
-      //  right color?
       if (turn === "White") {
         if (piece.charAt(0) !== "w") {
           alert("Invalid piece selected.");
@@ -45,10 +39,10 @@ const Board = () => {
         }
       }
     }
-    //  first element has to contain a piece; otherwise ignore
+    //  first element has to contain a piece; otherwise ignore move
     //  later, may also want to ignore clicking on a piece that cannot move
     if (move.length > 0 || piece !== "") {
-      let boardT = [...board];
+      let boardT = JSON.parse(JSON.stringify(board));
       let moveT = [...move];
       moveT.push({ squareId, piece });
       //  buncha logic goes here
@@ -62,17 +56,28 @@ const Board = () => {
         //  1. is this a valid move for the piece?
         //  2. did we move onto our own piece?  *invalid*
         //  3. did we move into check? *invalid *
+        //  piece has already been moved
         if (
           !movedOntoOwnPiece(from, to, color) &&
-          moveValidForPiece(from, to, color, type)
+          moveValidForPiece(boardT, from, to, color, type)
         ) {
           //  so far so good
           //  did we take a piece?
           //  move our piece
-          boardT[to[0]][to[1]].piece = board[from[0]][from[1]].piece;
+
+          // alert(
+          //   "is square the same object????" +
+          //     (boardT[to[0]][to[1]] === board[to[0]][to[1]])
+          // );
+          //  move NOT reflected in board above
+          //  how can this possibly be making the move in BOTH board and boardT????????????
+          boardT[to[0]][to[1]].piece = boardT[from[0]][from[1]].piece;
           boardT[from[0]][from[1]].piece = "";
+          //alert("Just updated boardT" + JSON.stringify(board));
+          //  alert shows board has been updated as well!!!!!
           if (!kingInCheck(boardT, color)) {
             //  finalize move
+
             setBoard(boardT);
             //  set king's location
             if (type === "K") {
@@ -82,11 +87,13 @@ const Board = () => {
             }
             setTurn(turn === "White" ? "Black" : "White");
             const oColor = color === "w" ? "b" : "w";
-            if (kingInCheck(board, oColor)) {
+            if (kingInCheck(boardT, oColor)) {
               alert(`${oColor} king in check!`); //  what about checkmate?
             }
           } else {
-            alert("Invalid move - king in check!");
+            alert("Invalid move - king in check!" + JSON.stringify(board));
+            //  move ALREADY reflected in board when this alert happens
+            //  seems to be moving piece anyway
           }
         } else {
           alert("Invalid move");
@@ -94,7 +101,7 @@ const Board = () => {
         //  when moveT.length = 2, we ALWAYS clear it.  Time for next move
         moveT = [];
       }
-      setMove(moveT);
+      setMove([...moveT]);
     }
   };
 
@@ -127,7 +134,7 @@ const Board = () => {
     return board[to[0]][to[1]].piece.charAt(0) === color ? true : false;
   };
 
-  const moveValidForPiece = (from, to, color, type) => {
+  const moveValidForPiece = (boardT, from, to, color, type) => {
     let valid = false;
     //  also need to check if move is blocked
     //  should we use a switch?
@@ -147,20 +154,20 @@ const Board = () => {
       //  if same row
       //valid = travelHoriz(from, to) === "ok" ? true : false;
       //  else if same column
-      valid = travel(from, to, "h") === "ok" ? true : false;
+      valid = travel(boardT, from, to, "h") === "ok" ? true : false;
 
       if (!valid) {
         //valid = travelVert(from, to) === "ok" ? true : false;
-        valid = travel(from, to, "v") === "ok" ? true : false;
+        valid = travel(boardT, from, to, "v") === "ok" ? true : false;
       }
     }
     //  +- multiple of seven or nine = diagonal move
     if (!valid && (type === "Q" || type === "B")) {
-      valid = travel(from, to, "d") === "ok" ? true : false;
+      valid = travel(boardT, from, to, "d") === "ok" ? true : false;
     }
     //  knight - ??  3 horiz/vert squares, one perpendicular, can't be blocked
     if (type === "N") {
-      valid = travel(from, to, "n") === "ok" ? true : false;
+      valid = travel(boardT, from, to, "n") === "ok" ? true : false;
       //  aw, hell no
       // const diff = Math.abs(from[0] * 8 + from[1] - (to[0] * 8 + to[1]));
       // console.log("diff: ", diff);
@@ -176,14 +183,14 @@ const Board = () => {
         (color === "b" &&
           ((from[1] === to[1] &&
             to[0] - from[0] === 1 &&
-            board[to[0]][to[1]].piece === "") ||
+            boardT[to[0]][to[1]].piece === "") ||
             (to[0] - from[0] === 2 &&
-              board[from[0] + 1][to[1]].piece === "" &&
-              board[to[0]][to[1]].piece === "" &&
+              boardT[from[0] + 1][to[1]].piece === "" &&
+              boardT[to[0]][to[1]].piece === "" &&
               to[0] === 3))) ||
         (Math.abs(from[1] - to[1]) === 1 &&
           to[0] - from[0] === 1 &&
-          board[to[0]][to[1]].piece !== "")
+          boardT[to[0]][to[1]].piece !== "")
       ) {
         valid = true;
       }
@@ -191,14 +198,14 @@ const Board = () => {
         (color === "w" &&
           ((from[1] === to[1] &&
             from[0] - to[0] === 1 &&
-            board[to[0]][to[1]].piece === "") ||
+            boardT[to[0]][to[1]].piece === "") ||
             (from[0] - to[0] === 2 &&
-              board[from[0] - 1][from[1]].piece === "" &&
-              board[to[0]][to[1]].piece === "" &&
+              boardT[from[0] - 1][from[1]].piece === "" &&
+              boardT[to[0]][to[1]].piece === "" &&
               to[0] === 4))) ||
         (Math.abs(to[1] - from[1]) === 1 &&
           from[0] - to[0] === 1 &&
-          board[to[0]][to[1]].piece !== "")
+          boardT[to[0]][to[1]].piece !== "")
       ) {
         valid = true;
       }
@@ -206,7 +213,7 @@ const Board = () => {
     return valid;
   };
 
-  function travel(from, to, direction, check) {
+  function travel(boardT, from, to, direction, check) {
     //  must be on same row to be horizontal
     if (direction === "h" && from[0] !== to[0]) {
       return "notValid";
@@ -267,14 +274,14 @@ const Board = () => {
 
     while (x !== toVal) {
       const currIndex = spaceNoToIndex(x);
-      console.log("currIndex: ", currIndex);
-      if (board[currIndex[0]][currIndex[1]].piece !== "") {
-        return board[currIndex[0]][currIndex[1]].piece;
+      //console.log("currIndex: ", currIndex);
+      if (boardT[currIndex[0]][currIndex[1]].piece !== "") {
+        return boardT[currIndex[0]][currIndex[1]].piece;
       }
       x += incDec;
     }
     if (check) {
-      return board[to[0]][to[1]].piece || "ok";
+      return boardT[to[0]][to[1]].piece || "ok";
     } else {
       return "ok";
     }
@@ -285,62 +292,62 @@ const Board = () => {
   //  1. horiz threats (L&R)
   //  2. vertical threats (top and bottom)
   //  3. diagonal threats (4 directions)
-  const kingInCheck = (board, color) => {
+  const kingInCheck = (boardT, color) => {
     //  under construction
     //return false;
     const kLoc = xLate(kingLocs[color]);
     //  horiz left
-    if (isThreat(travel(kLoc, [kLoc[0], 0], "h", true), color)) {
+    if (isThreat(travel(boardT, kLoc, [kLoc[0], 0], "h", true), color)) {
       return true;
     }
     //  horiz right
-    if (isThreat(travel(kLoc, [kLoc[0], 7], "h", true), color)) {
+    if (isThreat(travel(boardT, kLoc, [kLoc[0], 7], "h", true), color)) {
       return true;
     }
     //  vert up
-    if (isThreat(travel(kLoc, [0, kLoc[1]], "v", true), color)) {
+    if (isThreat(travel(boardT, kLoc, [0, kLoc[1]], "v", true), color)) {
       return true;
     }
     //  vert down
-    if (isThreat(travel(kLoc, [7, kLoc[1]], "v", true), color)) {
+    if (isThreat(travel(boardT, kLoc, [7, kLoc[1]], "v", true), color)) {
       return true;
     }
     //  diag northwest
     //  calc endpos from kLoc: stop at whichever axis turns zero first
     let endPos = calcEndPos(kLoc, -1, -1);
-    console.log("endPos: ", endPos);
-    if (isThreat(travel(kLoc, endPos, "d", true), color)) {
+    //console.log("endPos: ", endPos);
+    if (isThreat(travel(boardT, kLoc, endPos, "d", true), color)) {
       return true;
     }
     //  diag northeast
     //  calc endpos from kLoc: stop at whichever axis turns 0/7 first
     endPos = calcEndPos(kLoc, -1, 1);
-    console.log("endPos: ", endPos);
+    //console.log("endPos: ", endPos);
 
-    if (isThreat(travel(kLoc, endPos, "d", true), color)) {
+    if (isThreat(travel(boardT, kLoc, endPos, "d", true), color)) {
       return true;
     }
     //  diag southwest
     //  calc endpos from kLoc: stop at whichever axis turns 7/0 first
     endPos = calcEndPos(kLoc, 1, 1);
-    console.log("endPos: ", endPos);
+    //console.log("endPos: ", endPos);
 
-    if (isThreat(travel(kLoc, endPos, "d", true), color)) {
+    if (isThreat(travel(boardT, kLoc, endPos, "d", true), color)) {
       return true;
     }
     //  diag southeast
     //  calc endpos from kLoc: stop at whichever axis turns 7/7 first
     endPos = calcEndPos(kLoc, 1, -1);
-    console.log("endPos: ", endPos);
+    //console.log("endPos: ", endPos);
 
-    if (isThreat(travel(kLoc, endPos, "d", true), color)) {
+    if (isThreat(travel(boardT, kLoc, endPos, "d", true), color)) {
       return true;
     }
     return false;
   };
 
   const isThreat = (travelResult, color) => {
-    console.log("travelResult: ", travelResult, "color: ", color);
+    //console.log("travelResult: ", travelResult, "color: ", color);
     if (
       travelResult &&
       travelResult !== "ok" &&
