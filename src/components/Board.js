@@ -75,7 +75,11 @@ const Board = () => {
           boardT[from[0]][from[1]].piece = "";
           //alert("Just updated boardT" + JSON.stringify(board));
           //  alert shows board has been updated as well!!!!!
-          if (!kingInCheck(boardT, color)) {
+          let kLoc = null;
+          if (pieceAt(boardT, to).charAt(1) === "K") {
+            kLoc = to; // just moved it
+          }
+          if (!kingInCheck(boardT, color, kLoc)) {
             //  finalize move
 
             setBoard(boardT);
@@ -91,7 +95,7 @@ const Board = () => {
               alert(`${oColor} king in check!`); //  what about checkmate?
             }
           } else {
-            alert("Invalid move - king in check!" + JSON.stringify(board));
+            alert("Invalid move - king in check or checkmate!");
             //  move ALREADY reflected in board when this alert happens
             //  seems to be moving piece anyway
           }
@@ -139,30 +143,28 @@ const Board = () => {
     //  also need to check if move is blocked
     //  should we use a switch?
     //  note: king can put HIMSELF in check from other king
-    if (type === "K") {
-      if (
-        (Math.abs(to[0] - from[0]) === 1 && from[1] === to[1]) ||
-        (Math.abs(to[1] - from[1]) === 1 && from[0] === to[0]) ||
-        (Math.abs(to[0] - from[0]) === 1 && Math.abs(to[0] - from[0]) === 1)
-      ) {
-        valid = true;
-        //  no obstruction possible
-      }
-    }
+    // if (type === "K") {
+    //   if (
+    //     (Math.abs(to[0] - from[0]) === 1 && from[1] === to[1]) ||
+    //     (Math.abs(to[1] - from[1]) === 1 && from[0] === to[0]) ||
+    //     (Math.abs(to[0] - from[0]) === 1 && Math.abs(to[0] - from[0]) === 1)
+    //   ) {
+    //     valid = true;
+    //     //  no obstruction possible
+    //   }
+    // }
     //  check for horizontal or vertical move
-    if (type === "Q" || type === "R") {
+    if (type === "K" || type === "Q" || type === "R") {
       //  if same row
       //valid = travelHoriz(from, to) === "ok" ? true : false;
       //  else if same column
       valid = travel(boardT, from, to, "h") === "ok" ? true : false;
-
       if (!valid) {
-        //valid = travelVert(from, to) === "ok" ? true : false;
         valid = travel(boardT, from, to, "v") === "ok" ? true : false;
       }
     }
     //  +- multiple of seven or nine = diagonal move
-    if (!valid && (type === "Q" || type === "B")) {
+    if (!valid && (type === "K" || type === "Q" || type === "B")) {
       valid = travel(boardT, from, to, "d") === "ok" ? true : false;
     }
     //  knight - ??  3 horiz/vert squares, one perpendicular, can't be blocked
@@ -241,6 +243,7 @@ const Board = () => {
         return "notValid";
       }
     }
+
     let spaces = []; //  spaces in move length
     switch (direction) {
       case "h":
@@ -252,24 +255,10 @@ const Board = () => {
       case "d":
         spaces = [7, 9];
         break;
-      case "n":
-        spaces = [6, 10, 15, 17];
-        break;
     }
     //  spaces between from and to
+    //  how is this different from 'indexToSpaceNo'?
     const diff = Math.abs(from[0] * 8 + from[1] - (to[0] * 8 + to[1]));
-    //  if knight:
-    //    1. diff must be one of the items in 'spaces'
-    //    2. from, to MUST have different column AND row
-    //    3. obstructions not possible
-    if (
-      direction === "n" &&
-      spaces.includes(diff) &&
-      from[0] !== to[0] &&
-      from[1] !== to[1]
-    ) {
-      return "ok";
-    }
     //  check if diff is a multiple of spaces
     //  is this archaic?
     let div = 0;
@@ -282,6 +271,10 @@ const Board = () => {
     if (div === 0) {
       return "notValid";
     }
+    //  if 'from' piece is king, only ONE mult of allowed!
+    if (pieceAt(boardT, from).charAt(1) === "K" && div !== diff) {
+      return "notValid";
+    }
     console.log(from, to, "diff", diff, "direction: ", direction);
 
     //  obstructed?
@@ -289,6 +282,7 @@ const Board = () => {
     //  we need to know if 'to' is ultimately less or greater than 'from'
     const fromVal = indexToSpaceNo(from);
     const toVal = indexToSpaceNo(to);
+
     const incDec = fromVal < toVal ? div : -div;
     let x = fromVal + incDec;
 
@@ -312,10 +306,12 @@ const Board = () => {
   //  1. horiz threats (L&R)
   //  2. vertical threats (top and bottom)
   //  3. diagonal threats (4 directions)
-  const kingInCheck = (boardT, color) => {
+  const kingInCheck = (boardT, color, kLoc = null) => {
     //  under construction
     //return false;
-    const kLoc = xLate(kingLocs[color]);
+    if (kLoc === null) {
+      kLoc = xLate(kingLocs[color]);
+    }
     //  horiz left
     if (isThreat(travel(boardT, kLoc, [kLoc[0], 0], "h", true), color, "h")) {
       return true;
@@ -402,7 +398,25 @@ const Board = () => {
     if (isThreat(travel(boardT, kLoc, endPos, "n", true), color, "n")) {
       return true;
     }
-
+    //  check from pawn?
+    //  kLoc - 7 or - 9 if we are white
+    //  kLoc + 7 or + 9 if we are black
+    //  improvements - it would be good to have a function that would retrieve
+    //    the piece from a square, that would
+    //  oops!!  I was able to move black king into check with white pawn
+    //  K: 5e, P:4f
+    let posNeg = color === "w" ? -1 : 1;
+    let kSpaceNo = indexToSpaceNo(kLoc);
+    let piece = pieceAt(boardT, null, kSpaceNo + 7 * posNeg);
+    if (piece !== "" && piece.charAt(0) !== color && piece.charAt(1) === "P") {
+      return true;
+    }
+    piece = pieceAt(boardT, null, kSpaceNo + 9 * posNeg);
+    if (piece !== "" && piece.charAt(0) !== color && piece.charAt(1) === "P") {
+      return true;
+    }
+    console.log("kLoc: ", kLoc, "piece", piece, "kSpaceNo: ", kSpaceNo, posNeg);
+    //  pawns handled
     return false;
   };
 
@@ -416,11 +430,14 @@ const Board = () => {
     ) {
       if (
         ((direction === "h" || direction === "v") &&
-          (travelResult.charAt(1) === "Q" || travelResult.charAt(1) === "R")) ||
+          (travelResult.charAt(1) === "Q" ||
+            travelResult.charAt(1) === "R" ||
+            travelResult.charAt(1) === "K")) ||
         (direction === "v" &&
-          (travelResult.charAt(1) === "Q" || travelResult.charAt(1) === "B")) ||
-        (direction === "n" && travelResult.charAt(1) === "N") ||
-        (travelResult.charAt(1) === "K" && "what?")
+          (travelResult.charAt(1) === "Q" ||
+            travelResult.charAt(1) === "B" ||
+            travelResult.charAt(1) === "K")) ||
+        (direction === "n" && travelResult.charAt(1) === "N")
       ) {
         return true;
       }
@@ -444,6 +461,19 @@ const Board = () => {
       endPos[1] += colX;
     } while (endPos[0] > 0 && endPos[0] < 7 && endPos[1] > 0 && endPos[1] < 7);
     return endPos;
+  };
+
+  const pieceAt = (boardT, index, spaceNo) => {
+    // s this be called squareNo?
+    // if index is null, calculate from squareno
+    if (index === null) {
+      index = spaceNoToIndex(spaceNo);
+    }
+    //  should there be a routine "index not valid"?  Cuz we do a lot of this
+    if (index[0] < 0 || index[0] > 7 || index[1] < 0 || index[1] > 7) {
+      return ""; // for now, return nothing
+    }
+    return boardT[index[0]][index[1]].piece;
   };
 
   console.log(board);
