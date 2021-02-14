@@ -168,13 +168,6 @@ const Board = () => {
     //  knight - ??  3 horiz/vert squares, one perpendicular, can't be blocked
     if (type === "N") {
       valid = travel(boardT, from, to, "n") === "ok" ? true : false;
-      //  aw, hell no
-      // const diff = Math.abs(from[0] * 8 + from[1] - (to[0] * 8 + to[1]));
-      // console.log("diff: ", diff);
-      // if (diff === 6 || diff === 10 || diff === 15 || diff === 17) {
-      //   valid = true;
-      //   //  knight can't be obstructed
-      // }
     }
     //  pawn: ahead one; or two if first move; one diag if take opposing piece
     if (type === "P") {
@@ -214,12 +207,39 @@ const Board = () => {
   };
 
   function travel(boardT, from, to, direction, check) {
-    //  must be on same row to be horizontal
-    if (direction === "h" && from[0] !== to[0]) {
+    //  can't be off board
+    if (
+      from[0] < 0 ||
+      from[0] > 7 ||
+      from[1] < 0 ||
+      from[1] > 7 ||
+      to[0] < 0 ||
+      to[0] > 7 ||
+      to[1] < 0 ||
+      to[1] > 7
+    ) {
       return "notValid";
     }
-    if (check && JSON.stringify(from) == JSON.stringify(to)) {
+    if (direction === "h" && from[0] !== to[0]) {
+      //  must be on same row to be horizontal
+      return "notValid";
+    }
+    if (check && JSON.stringify(from) === JSON.stringify(to)) {
       return "ok";
+    }
+    //  do knights differently: diff between from & to is either 1 & 2 or 2 and 1
+    if (direction === "n") {
+      let first = Math.abs(from[0] - to[0]);
+      let second = Math.abs(from[1] - to[1]);
+      if ((first === 1 && second === 2) || (first === 2 && second === 1)) {
+        if (check) {
+          return boardT[to[0]][to[1]].piece || "ok";
+        } else {
+          return "ok";
+        }
+      } else {
+        return "notValid";
+      }
     }
     let spaces = []; //  spaces in move length
     switch (direction) {
@@ -297,56 +317,96 @@ const Board = () => {
     //return false;
     const kLoc = xLate(kingLocs[color]);
     //  horiz left
-    if (isThreat(travel(boardT, kLoc, [kLoc[0], 0], "h", true), color)) {
+    if (isThreat(travel(boardT, kLoc, [kLoc[0], 0], "h", true), color, "h")) {
       return true;
     }
     //  horiz right
-    if (isThreat(travel(boardT, kLoc, [kLoc[0], 7], "h", true), color)) {
+    if (isThreat(travel(boardT, kLoc, [kLoc[0], 7], "h", true), color, "h")) {
       return true;
     }
     //  vert up
-    if (isThreat(travel(boardT, kLoc, [0, kLoc[1]], "v", true), color)) {
+    if (isThreat(travel(boardT, kLoc, [0, kLoc[1]], "v", true), color, "v")) {
       return true;
     }
     //  vert down
-    if (isThreat(travel(boardT, kLoc, [7, kLoc[1]], "v", true), color)) {
+    if (isThreat(travel(boardT, kLoc, [7, kLoc[1]], "v", true), color, "v")) {
       return true;
     }
     //  diag northwest
     //  calc endpos from kLoc: stop at whichever axis turns zero first
     let endPos = calcEndPos(kLoc, -1, -1);
     //console.log("endPos: ", endPos);
-    if (isThreat(travel(boardT, kLoc, endPos, "d", true), color)) {
+    if (isThreat(travel(boardT, kLoc, endPos, "d", true), color, "d")) {
       return true;
     }
     //  diag northeast
     //  calc endpos from kLoc: stop at whichever axis turns 0/7 first
     endPos = calcEndPos(kLoc, -1, 1);
     //console.log("endPos: ", endPos);
-
-    if (isThreat(travel(boardT, kLoc, endPos, "d", true), color)) {
+    if (isThreat(travel(boardT, kLoc, endPos, "d", true), color, "d")) {
       return true;
     }
     //  diag southwest
     //  calc endpos from kLoc: stop at whichever axis turns 7/0 first
     endPos = calcEndPos(kLoc, 1, 1);
     //console.log("endPos: ", endPos);
-
-    if (isThreat(travel(boardT, kLoc, endPos, "d", true), color)) {
+    if (isThreat(travel(boardT, kLoc, endPos, "d", true), color, "d")) {
       return true;
     }
     //  diag southeast
     //  calc endpos from kLoc: stop at whichever axis turns 7/7 first
     endPos = calcEndPos(kLoc, 1, -1);
     //console.log("endPos: ", endPos);
-
-    if (isThreat(travel(boardT, kLoc, endPos, "d", true), color)) {
+    if (isThreat(travel(boardT, kLoc, endPos, "d", true), color, "d")) {
       return true;
     }
+    //  test knight
+    //  check each place a horsey could be
+    // up 2 left one
+    endPos = [kLoc[0] - 2, kLoc[1] - 1];
+    if (isThreat(travel(boardT, kLoc, endPos, "n", true), color, "n")) {
+      return true;
+    }
+    // up 2 right one
+    endPos = [kLoc[0] - 2, kLoc[1] + 1];
+    if (isThreat(travel(boardT, kLoc, endPos, "n", true), color, "n")) {
+      return true;
+    }
+    //  right 2 up one
+    endPos = [kLoc[0] - 1, kLoc[1] + 2];
+    if (isThreat(travel(boardT, kLoc, endPos, "n", true), color, "n")) {
+      return true;
+    }
+    //  right 2 down one
+    endPos = [kLoc[0] + 1, kLoc[1] + 2];
+    if (isThreat(travel(boardT, kLoc, endPos, "n", true), color, "n")) {
+      return true;
+    }
+    //  down two left one
+    endPos = [kLoc[0] + 2, kLoc[1] - 1];
+    if (isThreat(travel(boardT, kLoc, endPos, "n", true), color, "n")) {
+      return true;
+    }
+    //   down two right one
+    endPos = [kLoc[0] + 2, kLoc[1] + 1];
+    if (isThreat(travel(boardT, kLoc, endPos, "n", true), color, "n")) {
+      return true;
+    }
+    //  left two up one
+    endPos = [kLoc[0] - 1, kLoc[1] - 2];
+    if (isThreat(travel(boardT, kLoc, endPos, "n", true), color, "n")) {
+      return true;
+    }
+    //  left two down one
+    endPos = [kLoc[0] + 1, kLoc[1] - 2];
+    if (isThreat(travel(boardT, kLoc, endPos, "n", true), color, "n")) {
+      return true;
+    }
+
     return false;
   };
 
-  const isThreat = (travelResult, color) => {
+  const isThreat = (travelResult, color, direction) => {
     //console.log("travelResult: ", travelResult, "color: ", color);
     if (
       travelResult &&
@@ -355,9 +415,11 @@ const Board = () => {
       travelResult.charAt(0) !== color
     ) {
       if (
-        travelResult.charAt(1) === "Q" ||
-        travelResult.charAt(1) === "R" ||
-        travelResult.charAt(1) === "B" ||
+        ((direction === "h" || direction === "v") &&
+          (travelResult.charAt(1) === "Q" || travelResult.charAt(1) === "R")) ||
+        (direction === "v" &&
+          (travelResult.charAt(1) === "Q" || travelResult.charAt(1) === "B")) ||
+        (direction === "n" && travelResult.charAt(1) === "N") ||
         (travelResult.charAt(1) === "K" && "what?")
       ) {
         return true;
