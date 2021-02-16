@@ -8,8 +8,8 @@ const Square = ({ data, images, squareNum, onSquareClicked }) => {
     <>
       <div
         style={{
-          width: "10vw",
-          height: "10vw",
+          width: "8vw",
+          height: "8vw",
           border: "1px solid black",
           boxSizing: "border-box",
           position: "relative",
@@ -23,7 +23,10 @@ const Square = ({ data, images, squareNum, onSquareClicked }) => {
         onClick={() => onSquareClicked(data.id, data.piece)}
       >
         {data.piece && (
-          <img style={{ margin: "auto" }} src={images[data.piece]} />
+          <img
+            style={{ margin: "auto", width: "6vw", height: "6vw" }}
+            src={images[data.piece]}
+          />
         )}
         <div style={{ position: "absolute", right: "5px", bottom: "5px" }}>
           {data.id}

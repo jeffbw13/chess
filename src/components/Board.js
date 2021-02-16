@@ -1,40 +1,41 @@
 import React, { useState, useEffect } from "react";
 import Square from "./Square";
-import { startup } from "../../data/startup";
+import * as d from "../../data/data";
+import * as h from "../library/helpers";
 //  this retrieves where in /dist the images now reside
 const images = require("../images/pieces/*.png");
 
-const alph = ["a", "b", "c", "d", "e", "f", "g", "h"];
 const Board = () => {
   const [board, setBoard] = useState([]);
   const [kingLocs, setKingLocs] = useState({ w: "1e", b: "8e" });
   const [turn, setTurn] = useState("White");
   const [move, setMove] = useState([]);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     const board = new Array(8)
       .fill(new Array(8).fill("element"))
       .map((a, i) => {
         return a.map((s, j) => {
-          const id = `${8 - i}${alph[j]}`;
-          return { id: id, piece: startup[id] || "" };
+          const id = `${8 - i}${d.alph[j]}`;
+          return { id: id, piece: d.setup[id] || "" };
         });
       });
     setBoard(board);
   }, []);
 
   const onSquareClicked = (squareId, piece) => {
-    //  alerts should be replaced by alarm messages
+    setMessage("");
     //  this seems verbose
     if (move.length === 0 && piece !== "") {
       if (turn === "White") {
         if (piece.charAt(0) !== "w") {
-          alert("Invalid piece selected.");
+          setMessage("Invalid piece selected.");
           piece = "";
         }
       } else {
         if (piece.charAt(0) !== "b") {
-          alert("Invalid piece selected.");
+          setMessage("Invalid piece selected.");
           piece = "";
         }
       }
@@ -45,10 +46,10 @@ const Board = () => {
       let boardT = JSON.parse(JSON.stringify(board));
       let moveT = [...move];
       moveT.push({ squareId, piece });
-      //  buncha logic goes here
+      //  the real action happens here
       if (moveT.length === 2) {
-        const from = xLate(moveT[0].squareId);
-        const to = xLate(moveT[1].squareId);
+        const from = h.xLateIdIndex(moveT[0].squareId);
+        const to = h.xLateIdIndex(moveT[1].squareId);
         const color = moveT[0].piece.charAt(0);
         //  type should probably be enum
         const type = moveT[0].piece.charAt(1);
@@ -56,34 +57,23 @@ const Board = () => {
         //  1. is this a valid move for the piece?
         //  2. did we move onto our own piece?  *invalid*
         //  3. did we move into check? *invalid *
-        //  piece has already been moved
         if (
-          !movedOntoOwnPiece(from, to, color) &&
+          !movedOntoOwnPiece(boardT, from, to, color) &&
           moveValidForPiece(boardT, from, to, color, type)
         ) {
           //  so far so good
-          //  did we take a piece?
+          //  did we take a piece?  Should we do something with it?
           //  move our piece
-
-          // alert(
-          //   "is square the same object????" +
-          //     (boardT[to[0]][to[1]] === board[to[0]][to[1]])
-          // );
-          //  move NOT reflected in board above
-          //  how can this possibly be making the move in BOTH board and boardT????????????
           boardT[to[0]][to[1]].piece = boardT[from[0]][from[1]].piece;
           boardT[from[0]][from[1]].piece = "";
-          //alert("Just updated boardT" + JSON.stringify(board));
-          //  alert shows board has been updated as well!!!!!
           let kLoc = null;
-          if (pieceAt(boardT, to).charAt(1) === "K") {
+          if (h.pieceAt(boardT, to).charAt(1) === "K") {
             kLoc = to; // just moved it
           }
           if (!kingInCheck(boardT, color, kLoc)) {
             //  finalize move
-
             setBoard(boardT);
-            //  set king's location
+            //  set king's location for checking check
             if (type === "K") {
               const kingLocsT = kingLocs;
               kingLocsT[color] = moveT[1].squareId; // 'to' location
@@ -92,15 +82,13 @@ const Board = () => {
             setTurn(turn === "White" ? "Black" : "White");
             const oColor = color === "w" ? "b" : "w";
             if (kingInCheck(boardT, oColor)) {
-              alert(`${oColor} king in check!`); //  what about checkmate?
+              setMessage(`${oColor} king in check!`); //  what about checkmate?
             }
           } else {
-            alert("Invalid move - king in check or checkmate!");
-            //  move ALREADY reflected in board when this alert happens
-            //  seems to be moving piece anyway
+            setMessage("Invalid move - king in check or checkmate!");
           }
         } else {
-          alert("Invalid move");
+          setMessage("Invalid move");
         }
         //  when moveT.length = 2, we ALWAYS clear it.  Time for next move
         moveT = [];
@@ -109,71 +97,23 @@ const Board = () => {
     }
   };
 
-  const xLate = squareId => {
-    //  translate click position to matrix point
-    const row = 8 - parseInt(squareId.charAt(0));
-    const col = alph.indexOf(squareId.charAt(1));
-    return [row, col];
-  };
-
-  const xLateBack = index => {
-    //  translate click position to matrix point
-    const col = alph[index[1]];
-    const row = 8 - index[0];
-    return row + col;
-  };
-
-  function spaceNoToIndex(spaceNo) {
-    const row = Math.floor(spaceNo / 8);
-    const col = spaceNo % 8;
-    return [row, col];
-  }
-
-  function indexToSpaceNo(index) {
-    return index[0] * 8 + index[1];
-  }
-
-  const movedOntoOwnPiece = (from, to, color) => {
-    console.log("to ", to, "board to ", board[to[0]][to[1]]);
-    return board[to[0]][to[1]].piece.charAt(0) === color ? true : false;
+  const movedOntoOwnPiece = (boardT, from, to, color) => {
+    return h.pieceAt(boardT, to).charAt(0) === color ? true : false;
   };
 
   const moveValidForPiece = (boardT, from, to, color, type) => {
     let valid = false;
-    //  also need to check if move is blocked
-    //  should we use a switch?
-    //  note: king can put HIMSELF in check from other king
-    // if (type === "K") {
-    //   if (
-    //     (Math.abs(to[0] - from[0]) === 1 && from[1] === to[1]) ||
-    //     (Math.abs(to[1] - from[1]) === 1 && from[0] === to[0]) ||
-    //     (Math.abs(to[0] - from[0]) === 1 && Math.abs(to[0] - from[0]) === 1)
-    //   ) {
-    //     valid = true;
-    //     //  no obstruction possible
-    //   }
-    // }
-    //  check for horizontal or vertical move
-    if (type === "K" || type === "Q" || type === "R") {
-      //  if same row
-      //valid = travelHoriz(from, to) === "ok" ? true : false;
-      //  else if same column
-      valid = travel(boardT, from, to, "h") === "ok" ? true : false;
-      if (!valid) {
-        valid = travel(boardT, from, to, "v") === "ok" ? true : false;
+    const pt = d.pieceTravel.get(type);
+    if (pt) {
+      for (let x = 0; x < pt.length; x++) {
+        if (travel(boardT, from, to, pt[x]) === "ok") {
+          valid = true;
+          break;
+        }
       }
     }
-    //  +- multiple of seven or nine = diagonal move
-    if (!valid && (type === "K" || type === "Q" || type === "B")) {
-      valid = travel(boardT, from, to, "d") === "ok" ? true : false;
-    }
-    //  knight - ??  3 horiz/vert squares, one perpendicular, can't be blocked
-    if (type === "N") {
-      valid = travel(boardT, from, to, "n") === "ok" ? true : false;
-    }
-    //  pawn: ahead one; or two if first move; one diag if take opposing piece
     if (type === "P") {
-      // this can probably be simplified
+      //  clean this mess up!
       if (
         (color === "b" &&
           ((from[1] === to[1] &&
@@ -209,33 +149,26 @@ const Board = () => {
   };
 
   function travel(boardT, from, to, direction, check) {
-    //  can't be off board
-    if (
-      from[0] < 0 ||
-      from[0] > 7 ||
-      from[1] < 0 ||
-      from[1] > 7 ||
-      to[0] < 0 ||
-      to[0] > 7 ||
-      to[1] < 0 ||
-      to[1] > 7
-    ) {
+    //  calculated items might be off board
+    if (h.offBoard(from) || h.offBoard(to)) {
       return "notValid";
     }
+    //  must be on same row to be horizontal
     if (direction === "h" && from[0] !== to[0]) {
-      //  must be on same row to be horizontal
       return "notValid";
     }
+    //  pointing to itself
     if (check && JSON.stringify(from) === JSON.stringify(to)) {
       return "ok";
     }
-    //  do knights differently: diff between from & to is either 1 & 2 or 2 and 1
+    //  different formula for knights:
+    //  diff between from & to is either 1 & 2 or 2 and 1
     if (direction === "n") {
       let first = Math.abs(from[0] - to[0]);
       let second = Math.abs(from[1] - to[1]);
       if ((first === 1 && second === 2) || (first === 2 && second === 1)) {
         if (check) {
-          return boardT[to[0]][to[1]].piece || "ok";
+          return h.pieceAt(boardT, to) || "ok";
         } else {
           return "ok";
         }
@@ -244,7 +177,7 @@ const Board = () => {
       }
     }
 
-    let spaces = []; //  spaces in move length
+    let spaces = []; //  spaces in single move length
     switch (direction) {
       case "h":
         spaces = [1];
@@ -272,24 +205,25 @@ const Board = () => {
       return "notValid";
     }
     //  if 'from' piece is king, only ONE mult of allowed!
-    if (pieceAt(boardT, from).charAt(1) === "K" && div !== diff) {
+    if (!check && h.pieceAt(boardT, from).charAt(1) === "K" && div !== diff) {
       return "notValid";
     }
-    console.log(from, to, "diff", diff, "direction: ", direction);
+    //console.log(from, to, "diff", diff, "direction: ", direction);
 
     //  obstructed?
     //  for the sake of 'check,' we need to travel FROM from and TO to.
     //  we need to know if 'to' is ultimately less or greater than 'from'
-    const fromVal = indexToSpaceNo(from);
-    const toVal = indexToSpaceNo(to);
+    const fromVal = h.xLateIndexSquareNo(from);
+    const toVal = h.xLateIndexSquareNo(to);
 
     const incDec = fromVal < toVal ? div : -div;
     let x = fromVal + incDec;
 
     while (x !== toVal) {
-      const currIndex = spaceNoToIndex(x);
+      const currIndex = h.xLateSquareNoIndex(x);
       //console.log("currIndex: ", currIndex);
       if (boardT[currIndex[0]][currIndex[1]].piece !== "") {
+        //console.log(boardT[currIndex[0]][currIndex[1]].piece);
         return boardT[currIndex[0]][currIndex[1]].piece;
       }
       x += incDec;
@@ -306,11 +240,12 @@ const Board = () => {
   //  1. horiz threats (L&R)
   //  2. vertical threats (top and bottom)
   //  3. diagonal threats (4 directions)
+  //  4. knight move threats
+  //  5. pawn threats
   const kingInCheck = (boardT, color, kLoc = null) => {
-    //  under construction
-    //return false;
+    //  gotta be a better way
     if (kLoc === null) {
-      kLoc = xLate(kingLocs[color]);
+      kLoc = h.xLateIdIndex(kingLocs[color]);
     }
     //  horiz left
     if (isThreat(travel(boardT, kLoc, [kLoc[0], 0], "h", true), color, "h")) {
@@ -406,16 +341,16 @@ const Board = () => {
     //  oops!!  I was able to move black king into check with white pawn
     //  K: 5e, P:4f
     let posNeg = color === "w" ? -1 : 1;
-    let kSpaceNo = indexToSpaceNo(kLoc);
-    let piece = pieceAt(boardT, null, kSpaceNo + 7 * posNeg);
+    let kSpaceNo = h.xLateIndexSquareNo(kLoc);
+    let piece = h.pieceAt(boardT, null, kSpaceNo + 7 * posNeg);
     if (piece !== "" && piece.charAt(0) !== color && piece.charAt(1) === "P") {
       return true;
     }
-    piece = pieceAt(boardT, null, kSpaceNo + 9 * posNeg);
+    piece = h.pieceAt(boardT, null, kSpaceNo + 9 * posNeg);
     if (piece !== "" && piece.charAt(0) !== color && piece.charAt(1) === "P") {
       return true;
     }
-    console.log("kLoc: ", kLoc, "piece", piece, "kSpaceNo: ", kSpaceNo, posNeg);
+    //console.log("kLoc: ", kLoc, "piece", piece, "kSpaceNo: ", kSpaceNo, posNeg);
     //  pawns handled
     return false;
   };
@@ -428,17 +363,8 @@ const Board = () => {
       travelResult !== "notValid" &&
       travelResult.charAt(0) !== color
     ) {
-      if (
-        ((direction === "h" || direction === "v") &&
-          (travelResult.charAt(1) === "Q" ||
-            travelResult.charAt(1) === "R" ||
-            travelResult.charAt(1) === "K")) ||
-        (direction === "v" &&
-          (travelResult.charAt(1) === "Q" ||
-            travelResult.charAt(1) === "B" ||
-            travelResult.charAt(1) === "K")) ||
-        (direction === "n" && travelResult.charAt(1) === "N")
-      ) {
+      const pt = d.pieceTravel.get(travelResult.charAt(1));
+      if (pt && pt.includes(direction)) {
         return true;
       }
     }
@@ -463,45 +389,57 @@ const Board = () => {
     return endPos;
   };
 
-  const pieceAt = (boardT, index, spaceNo) => {
-    // s this be called squareNo?
-    // if index is null, calculate from squareno
-    if (index === null) {
-      index = spaceNoToIndex(spaceNo);
-    }
-    //  should there be a routine "index not valid"?  Cuz we do a lot of this
-    if (index[0] < 0 || index[0] > 7 || index[1] < 0 || index[1] > 7) {
-      return ""; // for now, return nothing
-    }
-    return boardT[index[0]][index[1]].piece;
-  };
-
-  console.log(board);
+  //console.log(board);
   let squareNum = 0;
+
   return (
     <>
-      <h1>Move: {turn}</h1>
       <div
-        style={{
-          width: "80vw",
-          display: "flex",
-          flexWrap: "wrap",
-          border: "1px solid black"
-        }}
+        className="container"
+        style={{ display: "flex", flexDirection: "row" }}
       >
-        {board.map(r => {
-          return r.map(s => {
-            return (
-              <Square
-                key={s.id}
-                data={s}
-                images={images}
-                squareNum={++squareNum}
-                onSquareClicked={onSquareClicked}
-              />
-            );
-          });
-        })}
+        <div
+          style={{
+            width: "64vw",
+            display: "flex",
+            flexWrap: "wrap",
+            border: "1px solid black"
+          }}
+        >
+          {board.map(r => {
+            return r.map(s => {
+              return (
+                <Square
+                  key={s.id}
+                  data={s}
+                  images={images}
+                  squareNum={++squareNum}
+                  onSquareClicked={onSquareClicked}
+                />
+              );
+            });
+          })}
+        </div>
+        <header
+          style={{
+            width: "30vw",
+            border: ".5px solid black",
+            borderRadius: "5px",
+            marginLeft: "15px",
+            padding: "10px",
+            boxSizing: "border-box"
+          }}
+        >
+          <div style={{ textAlign: "center" }}>
+            <h1 style={{ marginTop: "3px" }}>Chess</h1>
+          </div>
+
+          <div>
+            <h2 style={{ marginTop: "0px" }}>Move: {turn}</h2>
+          </div>
+          <hr />
+          <div>{message}</div>
+        </header>
       </div>
     </>
   );
