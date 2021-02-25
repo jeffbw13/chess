@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Square from "./Square";
-import * as d from "../../data/data";
+import * as d from "../data/data";
 import * as h from "../library/helpers";
 //  this retrieves where in /dist the images now reside
 const images = require("../images/pieces/*.png");

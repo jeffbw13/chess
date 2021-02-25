@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Chess app",
   "main": "index.js",
+  "homepage": "/subdir/",
   "dependencies": {
     "react": "^16.8.4",
     "react-dom": "^16.8.4"
