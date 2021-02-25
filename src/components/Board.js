@@ -438,7 +438,7 @@ const Board = () => {
             <h2 style={{ marginTop: "0px" }}>Move: {turn}</h2>
           </div>
           <hr />
-          <div>{message}</div>
+          <div className="message">{message}</div>
         </header>
       </div>
     </>
