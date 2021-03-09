@@ -212,6 +212,8 @@ const Board = () => {
       if (
         from[0] + advance === to[0] ||
         (from[0] + advance * 2 === to[0] &&
+          ((color === "w" && from[0] === 6) ||
+            (color === "b" && from[0] === 1)) &&
           h.pieceAt(boardT, [from[0] + advance, to[1]]) === "")
       ) {
         if (h.pieceAt(boardT, to) === "") {
