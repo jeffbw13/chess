@@ -113,37 +113,7 @@ const Board = () => {
       }
     }
     if (type === "P") {
-      //  clean this mess up!
-      if (
-        (color === "b" &&
-          ((from[1] === to[1] &&
-            to[0] - from[0] === 1 &&
-            boardT[to[0]][to[1]].piece === "") ||
-            (to[0] - from[0] === 2 &&
-              boardT[from[0] + 1][to[1]].piece === "" &&
-              boardT[to[0]][to[1]].piece === "" &&
-              to[0] === 3))) ||
-        (Math.abs(from[1] - to[1]) === 1 &&
-          to[0] - from[0] === 1 &&
-          boardT[to[0]][to[1]].piece !== "")
-      ) {
-        valid = true;
-      }
-      if (
-        (color === "w" &&
-          ((from[1] === to[1] &&
-            from[0] - to[0] === 1 &&
-            boardT[to[0]][to[1]].piece === "") ||
-            (from[0] - to[0] === 2 &&
-              boardT[from[0] - 1][from[1]].piece === "" &&
-              boardT[to[0]][to[1]].piece === "" &&
-              to[0] === 4))) ||
-        (Math.abs(to[1] - from[1]) === 1 &&
-          from[0] - to[0] === 1 &&
-          boardT[to[0]][to[1]].piece !== "")
-      ) {
-        valid = true;
-      }
+      valid = movePawn(boardT, from, to, color);
     }
     return valid;
   };
@@ -208,7 +178,6 @@ const Board = () => {
     if (!check && h.pieceAt(boardT, from).charAt(1) === "K" && div !== diff) {
       return "notValid";
     }
-    //console.log(from, to, "diff", diff, "direction: ", direction);
 
     //  obstructed?
     //  for the sake of 'check,' we need to travel FROM from and TO to.
@@ -234,6 +203,33 @@ const Board = () => {
       return "ok";
     }
   }
+
+  const movePawn = (boardT, from, to, color) => {
+    //  white advances backward
+    let advance = color === "w" ? -1 : 1;
+    //  column is the same, not obstructed, AND you're not landing on a piece
+    if (from[1] === to[1]) {
+      if (
+        from[0] + advance === to[0] ||
+        (from[0] + advance * 2 === to[0] &&
+          h.pieceAt(boardT, [from[0] + advance, to[1]]) === "")
+      ) {
+        if (h.pieceAt(boardT, to) === "") {
+          return true;
+        }
+      }
+    } else {
+      //  else must be one move forward, diagonal, and take a piece
+      if (
+        from[0] + advance === to[0] &&
+        (from[1] - 1 === to[1] || from[1] + 1 === to[1]) &&
+        h.pieceAt(boardT, to).charAt(0) === (color === "w" ? "b" : "w")
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   //  kingInCheck
   //  check for:
@@ -350,7 +346,6 @@ const Board = () => {
     if (piece !== "" && piece.charAt(0) !== color && piece.charAt(1) === "P") {
       return true;
     }
-    //console.log("kLoc: ", kLoc, "piece", piece, "kSpaceNo: ", kSpaceNo, posNeg);
     //  pawns handled
     return false;
   };
@@ -389,14 +384,13 @@ const Board = () => {
     return endPos;
   };
 
-  //console.log(board);
   let squareNum = 0;
 
   return (
     <>
       <div
         className="container"
-        style={{ display: "flex", flexDirection: "row" }}
+        style={{ display: "flex", flexDirection: "row", flexWrap: "wrap" }}
       >
         <div
           style={{

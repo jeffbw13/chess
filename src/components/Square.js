@@ -28,7 +28,7 @@ const Square = ({ data, images, squareNum, onSquareClicked }) => {
             src={images[data.piece]}
           />
         )}
-        <div style={{ position: "absolute", right: "5px", bottom: "5px" }}>
+        <div style={{ position: "absolute", right: "3px", bottom: "3px" }}>
           {data.id}
         </div>
       </div>
