@@ -85,7 +85,7 @@ const Board = () => {
               setMessage(`${oColor} king in check!`); //  what about checkmate?
             }
           } else {
-            setMessage("Invalid move - king in check or checkmate!");
+            setMessage("Invalid move - leaves king in check or checkmate!");
           }
         } else {
           setMessage("Invalid move");
